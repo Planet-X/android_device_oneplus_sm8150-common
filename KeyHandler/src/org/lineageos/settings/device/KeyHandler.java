@@ -17,7 +17,9 @@
 package org.lineageos.settings.device;
 
 import android.content.Context;
+import android.content.Intent;
 import android.media.AudioManager;
+import android.os.UserHandle;
 import android.os.Vibrator;
 import android.view.KeyEvent;
 
@@ -25,11 +27,16 @@ import com.android.internal.os.DeviceKeyHandler;
 
 public class KeyHandler implements DeviceKeyHandler {
     private static final String TAG = KeyHandler.class.getSimpleName();
+    
+    private static final String DOZE_INTENT = "com.android.systemui.doze.pulse";
 
     // Slider key codes
     private static final int MODE_NORMAL = 601;
     private static final int MODE_VIBRATION = 602;
     private static final int MODE_SILENCE = 603;
+    
+    // Single tap key code
+    private static final int SINGLE_TAP = 260;
 
     private final Context mContext;
     private final AudioManager mAudioManager;
@@ -55,6 +62,9 @@ public class KeyHandler implements DeviceKeyHandler {
             case MODE_SILENCE:
                 mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_SILENT);
                 break;
+            case SINGLE_TAP:
+                launchDozePulse();
+                return null; // Don't do haptic feedback
             default:
                 return event;
         }
@@ -69,5 +79,11 @@ public class KeyHandler implements DeviceKeyHandler {
         }
 
         mVibrator.vibrate(50);
+    }
+    
+    private void launchDozePulse() {
+        // Note: Only works with ambient display enabled.
+        mContext.sendBroadcastAsUser(new Intent(DOZE_INTENT),
+                new UserHandle(UserHandle.USER_CURRENT));
     }
 }
