@@ -27,6 +27,11 @@ import android.provider.Settings;
 import android.util.Log;
 import androidx.preference.PreferenceManager;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 import static android.provider.Settings.Secure.DOZE_ALWAYS_ON;
 import static android.provider.Settings.Secure.DOZE_ENABLED;
 
@@ -36,12 +41,16 @@ public final class Utils {
     private static final boolean DEBUG = false;
 
     private static final String DOZE_INTENT = "com.android.systemui.doze.pulse";
+    
+    private static final String SINGLE_TAP_SYSFS = "/proc/touchpanel/single_tap_enable";
 
     protected static final String ALWAYS_ON_DISPLAY = "always_on_display";
 
+    protected static final String CATEG_SINGLE_TAP = "single_tap";
     protected static final String CATEG_PICKUP_SENSOR = "pickup_sensor";
     protected static final String CATEG_PROX_SENSOR = "proximity_sensor";
 
+    protected static final String GESTURE_SINGLE_TAP_KEY = "gesture_single_tap";
     protected static final String GESTURE_PICK_UP_KEY = "gesture_pick_up";
     protected static final String GESTURE_POCKET_KEY = "gesture_pocket";
 
@@ -58,13 +67,21 @@ public final class Utils {
     }
 
     protected static void checkDozeService(Context context) {
-        if (isDozeEnabled(context) && !isAlwaysOnEnabled(context) && areGesturesEnabled(context)) {
+        if (isDozeEnabled(context) && !isAlwaysOnEnabled(context) && areServicedGesturesEnabled(context)) {
             startService(context);
         } else {
             stopService(context);
         }
     }
 
+    protected static void checkSingleTapNodeState(Context context) {
+	if (isDozeEnabled(context) && !isAlwaysOnEnabled(context) && Utils.isSingleTapEnabled(context)) {
+            Utils.enableSingleTap(true);
+        } else {
+            Utils.enableSingleTap(false);
+        }
+    }
+    
     protected static boolean isDozeEnabled(Context context) {
         return Settings.Secure.getInt(context.getContentResolver(),
                 DOZE_ENABLED, 1) != 0;
@@ -86,6 +103,10 @@ public final class Utils {
                 DOZE_ALWAYS_ON, enable ? 1 : 0, UserHandle.USER_CURRENT);
     }
 
+    protected static void enableSingleTap(boolean enable) {
+        writeFileValue(SINGLE_TAP_SYSFS, enable ? "1" : "0");
+    }
+
     protected static boolean isAlwaysOnEnabled(Context context) {
         return Settings.Secure.getIntForUser(context.getContentResolver(),
                 DOZE_ALWAYS_ON, 0, UserHandle.USER_CURRENT) != 0;
@@ -100,6 +121,10 @@ public final class Utils {
                 .getBoolean(gesture, false);
     }
 
+    protected static boolean isSingleTapEnabled(Context context) {
+        return isGestureEnabled(context, GESTURE_SINGLE_TAP_KEY);
+    }
+
     protected static boolean isPickUpEnabled(Context context) {
         return isGestureEnabled(context, GESTURE_PICK_UP_KEY);
     }
@@ -108,7 +133,7 @@ public final class Utils {
         return isGestureEnabled(context, GESTURE_POCKET_KEY);
     }
 
-    public static boolean areGesturesEnabled(Context context) {
+    public static boolean areServicedGesturesEnabled(Context context) {
         return isPickUpEnabled(context) || isPocketEnabled(context);
     }
 
@@ -119,5 +144,21 @@ public final class Utils {
             }
         }
         return null;
+    }
+
+    public static void writeFileValue(String filename, String value) {
+        if (filename == null) {
+            return;
+        }
+        try {
+            FileOutputStream fos = new FileOutputStream(new File(filename));
+            fos.write(value.getBytes());
+            fos.flush();
+            fos.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

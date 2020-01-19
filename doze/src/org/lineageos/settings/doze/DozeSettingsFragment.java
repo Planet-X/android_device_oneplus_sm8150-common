@@ -48,6 +48,7 @@ public class DozeSettingsFragment extends PreferenceFragment implements OnPrefer
 
     private SwitchPreference mAlwaysOnDisplayPreference;
 
+    private SwitchPreference mSingleTapPreference;
     private SwitchPreference mPickUpPreference;
     private SwitchPreference mPocketPreference;
 
@@ -72,10 +73,16 @@ public class DozeSettingsFragment extends PreferenceFragment implements OnPrefer
         mAlwaysOnDisplayPreference.setChecked(Utils.isAlwaysOnEnabled(getActivity()));
         mAlwaysOnDisplayPreference.setOnPreferenceChangeListener(this);
 
+        PreferenceCategory singletapSensorCategory = (PreferenceCategory) getPreferenceScreen().
+                findPreference(Utils.CATEG_SINGLE_TAP);
         PreferenceCategory pickupSensorCategory = (PreferenceCategory) getPreferenceScreen().
                 findPreference(Utils.CATEG_PICKUP_SENSOR);
         PreferenceCategory proximitySensorCategory = (PreferenceCategory) getPreferenceScreen().
                 findPreference(Utils.CATEG_PROX_SENSOR);
+
+	mSingleTapPreference = (SwitchPreference) findPreference(Utils.GESTURE_SINGLE_TAP_KEY);
+        mSingleTapPreference.setEnabled(dozeEnabled);
+        mSingleTapPreference.setOnPreferenceChangeListener(this);
 
         mPickUpPreference = (SwitchPreference) findPreference(Utils.GESTURE_PICK_UP_KEY);
         mPickUpPreference.setEnabled(dozeEnabled);
@@ -89,6 +96,7 @@ public class DozeSettingsFragment extends PreferenceFragment implements OnPrefer
         if (!Utils.alwaysOnDisplayAvailable(getActivity())) {
             getPreferenceScreen().removePreference(mAlwaysOnDisplayPreference);
         } else {
+            singletapSensorCategory.setDependency(Utils.ALWAYS_ON_DISPLAY);
             pickupSensorCategory.setDependency(Utils.ALWAYS_ON_DISPLAY);
             proximitySensorCategory.setDependency(Utils.ALWAYS_ON_DISPLAY);
         }
@@ -128,6 +136,10 @@ public class DozeSettingsFragment extends PreferenceFragment implements OnPrefer
         if (Utils.ALWAYS_ON_DISPLAY.equals(preference.getKey())) {
             Utils.enableAlwaysOn(getActivity(), (Boolean) newValue);
         }
+        
+        if (Utils.GESTURE_SINGLE_TAP_KEY.equals(preference.getKey())) {
+            Utils.enableSingleTap((Boolean) newValue);
+        }
 
         mHandler.post(() -> Utils.checkDozeService(getActivity()));
 
@@ -148,6 +160,7 @@ public class DozeSettingsFragment extends PreferenceFragment implements OnPrefer
         }
         mAlwaysOnDisplayPreference.setEnabled(isChecked);
 
+        mSingleTapPreference.setEnabled(isChecked);
         mPickUpPreference.setEnabled(isChecked);
         mPocketPreference.setEnabled(isChecked);
     }
